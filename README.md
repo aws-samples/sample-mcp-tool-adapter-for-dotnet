@@ -469,16 +469,25 @@ These are **not** verified and should be treated as assumptions until someone ru
 
 ## Status
 
-The core is complete and covered by 196 unit tests. The `System.Web` host compiles clean but **has
-never been run inside IIS** — it has no automated coverage, and the module registration, path
-resolution under a virtual directory, and body reading all need verifying against a real
-application before this goes anywhere near production.
+| Area | State |
+|---|---|
+| Schema generation, argument binding, dispatch, result shaping, OpenAPI, AgentCore validation | Complete, 196 unit tests |
+| AgentCore round trip | Verified live in us-east-1 — 15 operations through gateway, VPC Lattice, private API Gateway and Lambda |
+| Target registration | Verified live via CloudFormation and via the reconciler, 30 tests |
+| `net472` / WebForms build | Verified on macOS, Linux and Windows as part of `dotnet build` |
+| `System.Web` host **running under IIS** | **Not yet verified** — see below |
 
-`samples/OrderPortal.WebForms` narrows that gap without closing it. It is a real `net472` WebForms
-application exercising the host, and it builds as part of the solution on any operating system, so a
-change that breaks .NET Framework compatibility now fails the build rather than being discovered later.
-Building it caught one such break immediately: shared business logic using `Math.Clamp`, which does not
-exist on .NET Framework. What it still cannot do is *run* — that needs IIS on Windows.
+The one gap worth planning around: the `System.Web` host has no automated coverage, because its
+behaviour is a property of IIS rather than of the code. Module registration, path resolution under a
+virtual directory, and buffered body reading are each things this repository asserts and has not
+demonstrated. Run [`samples/OrderPortal.WebForms`](samples/OrderPortal.WebForms/README.md) under IIS
+Express against your own application shape before relying on them.
+
+That sample narrows the gap without closing it. It is a real `net472` WebForms application exercising
+the host, and it builds with the solution on any operating system, so a change that breaks .NET
+Framework compatibility fails the build instead of surfacing later — it caught one immediately, shared
+business logic using `Math.Clamp`, which does not exist on .NET Framework. What it cannot do here is
+*run*: that needs IIS on Windows.
 
 ## Security
 

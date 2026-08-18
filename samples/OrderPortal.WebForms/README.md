@@ -59,7 +59,7 @@ POST /_mcp/tools/get_order  {"orderId":10042}
 
 Every request needs `X-Mcp-Key: <your secret>`.
 
-## Honest status
+## What is verified, and what is not
 
 **This project is compile-verified, not run-verified.** It builds on macOS, Linux and Windows via
 `Microsoft.NETFramework.ReferenceAssemblies`, and that build is part of `dotnet build McpToolAdapter.slnx`
