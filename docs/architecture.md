@@ -132,14 +132,14 @@ flowchart LR
     linkStyle default stroke:#94a3b8,stroke-width:1.5px
 ```
 
-**Gate 1** runs at application startup and reports every problem at once — unbindable parameter,
+**Gate 1** runs at application startup and reports every problem at once: unbindable parameter,
 duplicate name, missing description, `out` parameter, unconstructable target.
 
 **Gate 2** checks the emitted document against AgentCore's documented constraints: no `oneOf`, no
 specification-level security schemes, a real `servers` URL, an `operationId` on every operation.
 
 **Gate 3** is the one that earns its place. AgentCore documents that breaching a model's tool-name
-limit fails in the *data plane* — the target creates cleanly and calls fail later. Checking it at
+limit fails in the data plane, so the target creates cleanly and calls fail later. Checking it at
 registration turns a mystery runtime failure into a refused deployment.
 
 Registration runs either from CDK or from the reconciler script; both apply gates 2 and 3. CDK is the
@@ -187,5 +187,5 @@ session an agent does not have, and there is no honest way to synthesise one.
 ## Caveat
 
 The `System.Web` adapter in view 2 compiles but has not run inside a live IIS application. Module
-registration, virtual-directory path resolution and request-body reading are the unverified parts —
-see "Verified against sources, and what is still assumed" in the root README.
+registration, virtual-directory path resolution and request-body reading are the unverified parts. See
+"Sources checked, and what is still assumed" in the root README.

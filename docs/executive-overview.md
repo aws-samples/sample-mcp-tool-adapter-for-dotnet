@@ -1,7 +1,7 @@
 # Exposing existing .NET applications to AI agents
 
 **In one sentence:** we add a thin layer to each existing application so AI agents can use its
-functions, and route everything through one central gateway — without rewriting or replacing the
+functions, and route everything through one central gateway, without rewriting or replacing the
 applications themselves.
 
 ```mermaid
@@ -59,7 +59,7 @@ same answers. This is the central point: rewriting working institutional logic i
 introduce errors into processes that were already correct.
 
 **Blue is what we add.** A small, standard layer per application that describes which functions are
-available and lets them be called. It is additive — no existing code is edited.
+available and lets them be called. It is additive, and no existing code is edited.
 
 **Amber is the single control point.** Every request passes through one gateway. Identity is verified
 there, access is granted per application, and every call is logged. Adding the fourth or fifth
