@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>McpToolAdapter.Jwt</RootNamespace>
+    <AssemblyName>McpToolAdapter.Jwt</AssemblyName>
+    <PackageId>McpToolAdapter.Jwt</PackageId>
+    <Description>
+      Validates OAuth bearer tokens so an AgentCore Gateway target can act on behalf of the
+      authenticated end user rather than as a service account. Optional companion to
+      McpToolAdapter.Web, kept separate on purpose: correct JWT validation needs a real library, and
+      the core's zero-dependency guarantee holds for anyone using API key authentication instead.
+    </Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Microsoft's own validation stack. Deliberately not hand-rolled: signature verification, JWKS
+      retrieval and key rotation are exactly where a bespoke implementation is quietly wrong.
+      ConfigurationManager handles discovery caching and refresh for us.
+    -->
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.16.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../McpToolAdapter.Core/McpToolAdapter.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>McpToolAdapter.Jwt.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

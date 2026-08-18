@@ -1,0 +1,51 @@
+# Build output
+bin/
+obj/
+artifacts/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Node / CDK
+node_modules/
+cdk.out/
+cdk/*.js
+cdk/*.d.ts
+!cdk/scripts/*.sh
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated OpenAPI documents are build artefacts, produced from the application's own tool registry.
+# Nothing here should be hand-edited or committed.
+cdk/schemas/*.openapi.json
+
+# Lambda publish output and generated schemas, both produced by cdk synth
+cdk/build/
+
+# Local configuration that may contain real ARNs, gateway ids or endpoints
+automation/applications.local.json
+cdk/cdk.context.json
+
+# Per-developer agent and editor settings. These carry local paths and tool permissions, which are
+# personal configuration rather than anything a contributor should inherit.
+.claude/settings.local.json
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

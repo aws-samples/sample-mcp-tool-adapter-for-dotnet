@@ -1,0 +1,25 @@
+{
+  "name": "mcptooladapter-cdk",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "mcptooladapter-cdk": "bin/app.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy",
+    "fetch-schema": "./scripts/fetch-schema.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.1029.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.264.0",
+    "constructs": "^10.0.0"
+  }
+}

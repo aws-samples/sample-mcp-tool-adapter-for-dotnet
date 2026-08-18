@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "Declarative list of applications exposed through one AgentCore gateway.",
+    "Adding an application is an entry here, not a code change.",
+    "credentialProviderArn is created once per application with",
+    "create_api_key_credential_provider - see ../samples/agentcore-target.py.",
+    "Its API key must hold the same value as the application's mcp:sharedSecret."
+  ],
+  "gatewayIdentifier": "your-gateway-id",
+  "applications": [
+    {
+      "_comment": "Private: no public endpoint. Values come from the McpToolAdapterPrivateApp stack outputs.",
+      "targetName": "orderportal",
+      "description": "Order portal operations, reached privately over VPC Lattice",
+      "baseUrl": "https://REPLACE.execute-api.us-east-1.amazonaws.com/live",
+      "sharedSecretArn": "arn:aws:secretsmanager:us-east-1:111122223333:secret:orderportal/mcp-REPLACE",
+      "credentialProviderArn": "arn:aws:bedrock-agentcore:us-east-1:111122223333:token-vault/default/apikeycredentialprovider/orderportal-mcp-key",
+      "privateEndpoint": {
+        "_comment": "routingDomain is the execute-api VPC endpoint DNS name, because the API host is not publicly resolvable.",
+        "vpcId": "vpc-REPLACE",
+        "subnetIds": [
+          "subnet-REPLACE-a",
+          "subnet-REPLACE-b"
+        ],
+        "securityGroupIds": [
+          "sg-REPLACE"
+        ],
+        "routingDomain": "vpce-REPLACE.execute-api.us-east-1.vpce.amazonaws.com"
+      }
+    },
+    {
+      "_comment": "Public endpoint form, for an application already reachable over the internet.",
+      "targetName": "billing",
+      "description": "Invoice lookup from the billing application",
+      "baseUrl": "https://billing.internal.example.com",
+      "sharedSecretArn": "arn:aws:secretsmanager:us-east-1:111122223333:secret:billing/mcp-shared-secret-GhIjKl",
+      "sharedSecretJsonField": "sharedSecret",
+      "credentialProviderArn": "arn:aws:bedrock-agentcore:us-east-1:111122223333:token-vault/default/apikeycredentialprovider/billing-mcp-key"
+    }
+  ]
+}

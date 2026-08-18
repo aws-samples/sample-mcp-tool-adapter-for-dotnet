@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>McpToolAdapter</RootNamespace>
+    <AssemblyName>McpToolAdapter.Core</AssemblyName>
+    <PackageId>McpToolAdapter.Core</PackageId>
+    <Description>
+      Core for exposing existing .NET methods as MCP-consumable tools: registration, JSON Schema
+      generation, argument binding, compiled invocation, result shaping and OpenAPI emission. Intended
+      for .NET Framework applications that the official MCP C# SDK cannot host; on .NET 8 or newer use
+      ModelContextProtocol instead. Has zero package dependencies by design, so it is safe to install
+      into a fragile legacy application.
+    </Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>McpToolAdapter.Core.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <!--
+    No PackageReference entries. This is intentional and load-bearing: the whole point of
+    this SDK is that installing it into a 15-year-old WebForms app cannot break that app
+    via transitive dependency or binding-redirect conflicts. Serialization is the host's
+    job (see McpToolAdapter.Web, which uses the JavaScriptSerializer already present in
+    System.Web.Extensions). If you add a dependency here, you have broken the contract.
+  -->
+
+</Project>

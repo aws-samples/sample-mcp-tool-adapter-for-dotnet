@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Targets .NET Framework and references System.Web, but compiles on macOS and Linux too via the
+    Microsoft.NETFramework.ReferenceAssemblies package below. It can only be *run* under IIS on
+    Windows. Everything worth unit-testing lives in McpToolAdapter.Core (netstandard2.0), leaving this
+    project as thin plumbing over it.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>McpToolAdapter.Web</RootNamespace>
+    <AssemblyName>McpToolAdapter.Web</AssemblyName>
+    <PackageId>McpToolAdapter.Web</PackageId>
+    <Description>
+      Drop-in System.Web host for McpToolAdapter, for ASP.NET Framework applications such as WebForms
+      and MVC 5 — the case ModelContextProtocol.AspNetCore cannot serve, since it ships no .NET
+      Framework assets. On .NET 8 or newer use the official MCP C# SDK instead. Installing this
+      registers an HTTP endpoint serving an OpenAPI document and JSON invocation for methods declared
+      in a ToolRegistry. No web.config handler entry and no code changes are needed to install it, and
+      the endpoint stays inert until explicitly enabled in configuration.
+    </Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Configuration" />
+    <!-- JavaScriptSerializer, used only for parsing request bodies. -->
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Ships with ASP.NET and is present in the GAC, but referenced as a package so the build does
+      not depend on machine state. Provides DynamicModuleUtility, which registers an IHttpModule
+      at application start with no web.config edit.
+    -->
+    <PackageReference Include="Microsoft.Web.Infrastructure" Version="1.0.0" />
+
+    <!-- Supplies .NET Framework reference assemblies so this compiles on any OS. Build-time only. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../McpToolAdapter.Core/McpToolAdapter.Core.csproj" />
+  </ItemGroup>
+
+</Project>

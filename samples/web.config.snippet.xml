@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sample: the appSettings block to merge into an existing application's web.config.
+
+  Installing the package adds NO endpoint. Everything stays inert until "enabled" is true, so
+  activation is a reviewable diff rather than a side effect of a package restore.
+-->
+<configuration>
+  <appSettings>
+
+    <!-- Master switch. Absent or false means the endpoint returns 404 as though not installed. -->
+    <add key="mcp:enabled" value="true" />
+
+    <!-- Identifies this application in tool names: orderapp_get_order_by_id. Set it — tool names
+         share one namespace at the client, and unprefixed names from separate apps collide. -->
+    <add key="mcp:namePrefix" value="orderapp" />
+
+    <!-- REQUIRED when enabled, minimum 32 characters. Without it the endpoint refuses every
+         request, because it would otherwise be unauthenticated remote invocation of your business
+         logic. Callers present it in the X-Mcp-Key header. Store it wherever this application
+         already keeps secrets, not in source control. -->
+    <add key="mcp:sharedSecret" value="REPLACE-WITH-A-32-PLUS-CHARACTER-RANDOM-SECRET" />
+
+    <!-- Optional: restrict callers to the gateway's addresses. -->
+    <add key="mcp:allowedIpAddresses" value="10.0.12.7,10.0.12.8" />
+
+    <!-- Start read-only. Flip to true only once you have decided the authorization model and
+         reviewed which mutating operations are exposed. -->
+    <add key="mcp:allowMutating" value="false" />
+
+    <!-- Public base URL as the gateway reaches this app; emitted into the OpenAPI document.
+         AgentCore requires a real, fully qualified server URL and rejects the target without one. -->
+    <add key="mcp:serverUrl" value="https://orders.internal.example.com" />
+
+    <!-- Optional. The name of the Bedrock AgentCore gateway target this endpoint is registered as.
+         Setting it lets the endpoint check at startup that no tool name will breach the model's
+         64-character limit once AgentCore prepends "<targetName>___" — a failure that otherwise
+         appears at invocation, long after the target was created cleanly. Problems are logged and
+         reported by /_mcp/health. Note that with this set you should usually leave namePrefix
+         EMPTY: AgentCore already namespaces by target name, and doing both wastes name budget. -->
+    <add key="mcp:agentCoreTargetName" value="orderapp" />
+
+    <!-- Defaults shown; all optional. -->
+    <add key="mcp:basePath" value="/_mcp" />
+    <add key="mcp:maxResultItems" value="200" />
+    <add key="mcp:title" value="Order management operations" />
+    <add key="mcp:documentVersion" value="1.0.0" />
+
+    <!-- Leave both false outside development. The first sends legacy exception text (connection
+         strings, SQL, internal paths) to callers; the second sends the shared secret in clear. -->
+    <add key="mcp:includeExceptionDetail" value="false" />
+    <add key="mcp:allowInsecureTransport" value="false" />
+
+  </appSettings>
+</configuration>

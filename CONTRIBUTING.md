@@ -40,6 +40,30 @@ GitHub provides additional document on [forking a repository](https://help.githu
 [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
 
+## Building and testing
+
+The core library and its tests build on any operating system:
+
+```bash
+dotnet build
+dotnet test
+python3 -m unittest discover -s automation -p 'test_*.py'
+cd cdk && npm install && npx tsc --noEmit && npx cdk synth --quiet
+```
+
+`McpToolAdapter.Web` targets .NET Framework but compiles on any operating system via the
+`Microsoft.NETFramework.ReferenceAssemblies` package. It can only be *run* under IIS on Windows.
+
+Two conventions this project holds to; please preserve them:
+
+* **`McpToolAdapter.Core` has zero package dependencies.** This is deliberate — the library is
+  installed into long-lived applications where a transitive dependency or binding-redirect conflict is
+  the most likely way to break something in production. If a change needs a dependency, it belongs in
+  a separate package.
+* **Validation failures surface at startup, not at call time**, and report every problem at once. A
+  tool that silently fails to appear is far more expensive to diagnose than an application that
+  refuses to start.
+
 ## Finding contributions to work on
 Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
 

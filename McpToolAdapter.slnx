@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/OrderPortal/OrderPortal.csproj" />
+    <Project Path="samples/QuickStart/QuickStart.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/McpToolAdapter.Core/McpToolAdapter.Core.csproj" />
+    <Project Path="src/McpToolAdapter.Jwt/McpToolAdapter.Jwt.csproj" />
+    <Project Path="src/McpToolAdapter.Web/McpToolAdapter.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/McpToolAdapter.Core.Tests/McpToolAdapter.Core.Tests.csproj" />
+    <Project Path="tests/McpToolAdapter.Jwt.Tests/McpToolAdapter.Jwt.Tests.csproj" />
+  </Folder>
+</Solution>

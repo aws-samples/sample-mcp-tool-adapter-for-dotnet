@@ -1,0 +1,55 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT-0
+
+// ---------------------------------------------------------------------------------------------
+// Sample: the ONLY file you add to an existing WebForms application.
+//
+// Not compiled as part of this repository (it references types that live in your application),
+// hence the .txt extension. Copy it into your app, change the types, delete the rest.
+//
+// This one file is the complete, auditable list of what the application exposes. Hand it to
+// whoever reviews the change.
+// ---------------------------------------------------------------------------------------------
+
+using System.Collections.Generic;
+using McpToolAdapter;
+using Contoso.Orders.BusinessLogic;   // <- your existing, untouched assembly
+
+namespace Contoso.Orders.Web
+{
+    public sealed class OrderAppTools : ToolRegistry
+    {
+        public override void Configure(IToolBuilder b)
+        {
+            // Write the body as a call with dummy arguments. It is never executed — only the
+            // MethodInfo is read from the expression tree, which is what makes this rename-safe.
+            b.Expose<OrderService, Order>(s => s.GetOrderById(default(int)))
+             .Describes("Fetch a single order by its numeric order ID. Returns null if no such order exists.")
+             .Describes("id", "The numeric order identifier, as shown on the order confirmation.");
+
+            b.Expose<OrderService, IList<Order>>(s => s.Search(default(OrderQuery)))
+             .Describes("Search orders by customer email, status and date range. Returns at most 200 rows.")
+             .MaxResultItems(200);
+
+            // Anything that changes state must say so, and stays blocked until
+            // mcp:allowMutating is switched on.
+            b.Expose<OrderService>(s => s.CancelOrder(default(int), default(string)))
+             .Describes("Cancel an order that has not yet shipped.")
+             .Mutating();
+
+            // A service that needs constructor arguments: supply it explicitly.
+            b.Expose<ReportingService, decimal>(s => s.RevenueForMonth(default(int), default(int)))
+             .Describes("Total recognised revenue for a given year and month, in GBP.")
+             .Using(() => new ReportingService(ConfigurationManager.ConnectionStrings["Reporting"].ConnectionString));
+
+            // Static helpers work too.
+            b.ExposeStatic<bool>(() => PostcodeValidator.IsValid(default(string)))
+             .Describes("Check whether a UK postcode is structurally valid.");
+
+            // Registration by name, for signatures that are awkward to write as an expression.
+            // Not rename-safe, but a name that stops resolving fails at application start, loudly.
+            b.Expose(typeof(LegacyLookup), "FindByReference")
+             .Describes("Look up a record by its legacy reference string.");
+        }
+    }
+}
