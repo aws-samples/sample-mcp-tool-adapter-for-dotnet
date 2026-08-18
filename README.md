@@ -3,10 +3,11 @@
 MCP tools from ASP.NET Framework applications — the estate the official MCP C# SDK cannot host.
 
 > **On .NET 8 or newer, use the [official MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk)
-> instead.** It is mature, Microsoft-collaborated, and does this properly for modern .NET. This project
-> exists for one reason: `ModelContextProtocol.AspNetCore` ships only `net8.0`/`net9.0`/`net10.0`
-> assets and so cannot run on .NET Framework — which is exactly where WebForms and MVC 5 applications
-> live. See [relationship to the official SDK](#relationship-to-the-official-mcp-c-sdk).
+> instead.** It is GA, Microsoft-collaborated, and does this properly for modern .NET. This project
+> exists because its ASP.NET integration, `ModelContextProtocol.AspNetCore`, ships only
+> `net8.0`/`net9.0`/`net10.0` assets, so it cannot run on .NET Framework — which is exactly where
+> WebForms and MVC 5 applications live. The `ModelContextProtocol` core package *does* ship
+> `netstandard2.0`; [why that is not enough on its own](#relationship-to-the-official-mcp-c-sdk).
 
 No existing line of code is edited: no `Global.asax` change, no `web.config` handler registration, no
 new project, and nothing touched in your business logic. You do add code — see
@@ -370,13 +371,15 @@ people who define the protocol.
 *could* reference it, and this project could have been built on its server primitives instead of
 generating schemas itself. Two reasons it was not:
 
-- That `netstandard2.0` asset resolves to **27** transitive packages. Measured, not estimated: a
-  throwaway `netstandard2.0` project referencing `ModelContextProtocol` 2.2.0, then
-  `dotnet list package --include-transitive`. Among them are `System.Text.Json`, `System.Memory`,
-  `System.Buffers`, `System.Runtime.CompilerServices.Unsafe`, `System.Collections.Immutable`,
-  `System.IO.Pipelines` and `Microsoft.Extensions.AI.Abstractions` — which is close to a list of the
-  assemblies most likely to produce a binding-redirect conflict in a long-lived `System.Web`
-  application. Introducing them is the most likely way to break it on install day. This core has zero.
+- Referencing it brings **20** packages. Measured rather than estimated: a throwaway `netstandard2.0`
+  project referencing `ModelContextProtocol.Core` 2.2.0, then `dotnet list package
+  --include-transitive`. (The full `ModelContextProtocol` package brings 27; the smaller number is used
+  here because it is the one a reader checking this claim would compute.) Among them are
+  `System.Text.Json`, `System.Memory`, `System.Buffers`, `System.Runtime.CompilerServices.Unsafe`,
+  `System.Collections.Immutable`, `System.IO.Pipelines` and `Microsoft.Extensions.AI.Abstractions` —
+  close to a list of the assemblies most likely to cause a binding-redirect conflict in a long-lived
+  `System.Web` application. Introducing them is the most likely way to break it on install day. This
+  core has zero.
 - It speaks MCP directly, which needs Streamable HTTP or SSE. Long-lived connections under
   `System.Web` fight the ASP.NET thread model and do not survive app-pool recycles. Emitting OpenAPI
   and letting the gateway translate keeps every request a plain synchronous round trip.
