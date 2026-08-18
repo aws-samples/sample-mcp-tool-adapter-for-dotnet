@@ -31,7 +31,7 @@ for that, use the official SDK as noted above.
 **Verified end to end.** In us-east-1, AgentCore accepted the emitted document, `tools/list` returned
 all 15 operations, and `tools/call` returned real data through gateway → VPC Lattice → private API
 Gateway → Lambda → business logic. [`docs/agentcore-test.md`](docs/agentcore-test.md) has the procedure,
-the five defects the live test exposed, and how to tell two identical-looking silent failures apart.
+the six defects the live test exposed, and how to tell two identical-looking silent failures apart.
 
 It deploys a realistic 15-operation application behind a **private** REST API Gateway — no public
 endpoint at all — and has AgentCore reach it over VPC Lattice. No IIS, no certificate, no container
@@ -59,6 +59,7 @@ three validation gates, and the on-behalf-of identity sequence.
 | `automation/` | Idempotent target reconciler, CLI and Lambda entry points, 30 tests |
 | `samples/QuickStart` | Minimal runnable ASP.NET Core demonstration — the fastest way to see it work |
 | `samples/OrderPortal` | Realistic 15-operation application, `DataTable`/`DataSet` results, deployed privately |
+| `samples/OrderPortal.WebForms` | **The case this repository is for**: the same 15 operations on `net472` WebForms, business logic linked by source from `samples/OrderPortal` to prove it is unchanged |
 | `samples/` | The one file you add to an application, the `web.config` block, a generated OpenAPI document |
 | `docs/` | Architecture diagrams, AgentCore test procedure, one-pager, executive overview |
 
@@ -123,7 +124,9 @@ classic ASP.NET). This registers an HTTP module at application start via
 `PreApplicationStartMethod` — the mechanism ELMAH and MiniProfiler used for drop-in installs. No
 config entry, no code change.
 
-**2. Add one registry class.** See [`samples/OrderApp.Tools.cs.txt`](samples/OrderApp.Tools.cs.txt).
+**2. Add one registry class.** A minimal illustration is
+[`samples/OrderApp.Tools.cs.txt`](samples/OrderApp.Tools.cs.txt); for a complete WebForms application
+with 15 operations wired up, see [`samples/OrderPortal.WebForms`](samples/OrderPortal.WebForms/README.md).
 
 ```csharp
 public sealed class OrderAppTools : ToolRegistry
@@ -367,10 +370,13 @@ people who define the protocol.
 *could* reference it, and this project could have been built on its server primitives instead of
 generating schemas itself. Two reasons it was not:
 
-- That `netstandard2.0` asset carries **nine** transitive dependencies (`Microsoft.Bcl.Memory`,
-  `System.Collections.Immutable`, `System.IO.Pipelines`, `Microsoft.Extensions.AI.Abstractions`, and
-  others). Introducing that into a fifteen-year-old application is the most likely way to break it on
-  install day. This core has zero.
+- That `netstandard2.0` asset resolves to **27** transitive packages. Measured, not estimated: a
+  throwaway `netstandard2.0` project referencing `ModelContextProtocol` 2.2.0, then
+  `dotnet list package --include-transitive`. Among them are `System.Text.Json`, `System.Memory`,
+  `System.Buffers`, `System.Runtime.CompilerServices.Unsafe`, `System.Collections.Immutable`,
+  `System.IO.Pipelines` and `Microsoft.Extensions.AI.Abstractions` — which is close to a list of the
+  assemblies most likely to produce a binding-redirect conflict in a long-lived `System.Web`
+  application. Introducing them is the most likely way to break it on install day. This core has zero.
 - It speaks MCP directly, which needs Streamable HTTP or SSE. Long-lived connections under
   `System.Web` fight the ASP.NET thread model and do not survive app-pool recycles. Emitting OpenAPI
   and letting the gateway translate keeps every request a plain synchronous round trip.
@@ -464,6 +470,12 @@ The core is complete and covered by 196 unit tests. The `System.Web` host compil
 never been run inside IIS** — it has no automated coverage, and the module registration, path
 resolution under a virtual directory, and body reading all need verifying against a real
 application before this goes anywhere near production.
+
+`samples/OrderPortal.WebForms` narrows that gap without closing it. It is a real `net472` WebForms
+application exercising the host, and it builds as part of the solution on any operating system, so a
+change that breaks .NET Framework compatibility now fails the build rather than being discovered later.
+Building it caught one such break immediately: shared business logic using `Math.Clamp`, which does not
+exist on .NET Framework. What it still cannot do is *run* — that needs IIS on Windows.
 
 ## Security
 

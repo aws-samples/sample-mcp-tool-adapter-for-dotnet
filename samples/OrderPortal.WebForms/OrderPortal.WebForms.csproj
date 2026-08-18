@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The case this whole project exists for: an ASP.NET WebForms application on .NET Framework, which
+    ModelContextProtocol.AspNetCore cannot host because it ships only net8.0/net9.0/net10.0 assets.
+
+    Compiles on macOS and Linux via Microsoft.NETFramework.ReferenceAssemblies, so it can be built and
+    reviewed anywhere. It can only be *run* under IIS on Windows — see README.md.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>OrderPortal.WebForms</RootNamespace>
+    <AssemblyName>OrderPortal.WebForms</AssemblyName>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      The linked business-logic files below use file-scoped namespaces, so they need a modern language
+      version. Language version is a compiler setting, not a runtime one — C# 10 syntax compiles to
+      IL that .NET Framework 4.7.2 runs perfectly well. This is worth knowing generally: "old runtime"
+      does not mean "old language".
+    -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!--
+      A WebForms application is not built by `dotnet build` into a runnable site; the .aspx markup is
+      compiled by ASP.NET at request time on the server. This project therefore produces the assembly
+      that the markup inherits from, and the .aspx/.config files are content deployed alongside it.
+    -->
+    <OutputType>Library</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Configuration" />
+    <!-- The data layer hands back DataTable and DataSet, as ADO.NET-era code does. -->
+    <Reference Include="System.Data" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Only the host package is referenced. Nothing else in the application changes.
+    -->
+    <ProjectReference Include="../../src/McpToolAdapter.Web/McpToolAdapter.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The same business logic and the same tool registry as the ASP.NET Core sample, linked by source
+      rather than copied.
+
+      This is the point of the sample. These four files are byte-for-byte the files that run on .NET 8
+      in samples/OrderPortal; the only difference is the host around them. If exposing an application
+      required editing its business logic, this would not compile.
+    -->
+    <Compile Include="../OrderPortal/Domain.cs" Link="Shared/Domain.cs" />
+    <Compile Include="../OrderPortal/DataAccess.cs" Link="Shared/DataAccess.cs" />
+    <Compile Include="../OrderPortal/Services.cs" Link="Shared/Services.cs" />
+    <Compile Include="../OrderPortal/PortalTools.cs" Link="Shared/PortalTools.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Markup and configuration are content: compiled by ASP.NET at runtime, not by this build. -->
+    <Content Include="Default.aspx" />
+    <Content Include="Orders.aspx" />
+    <Content Include="Global.asax" />
+    <Content Include="Web.config" />
+  </ItemGroup>
+
+</Project>

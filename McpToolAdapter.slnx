@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/samples/">
     <Project Path="samples/OrderPortal/OrderPortal.csproj" />
+    <Project Path="samples/OrderPortal.WebForms/OrderPortal.WebForms.csproj" />
     <Project Path="samples/QuickStart/QuickStart.csproj" />
   </Folder>
   <Folder Name="/src/">

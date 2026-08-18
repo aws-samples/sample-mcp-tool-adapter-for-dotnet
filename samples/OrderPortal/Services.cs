@@ -38,7 +38,9 @@ public sealed class OrderService
 
         var matching = query.OrderBy(o => o.Id).ToList();
         var page = Math.Max(1, search.Page);
-        var pageSize = Math.Clamp(search.PageSize <= 0 ? 25 : search.PageSize, 1, 100);
+        // Math.Min/Max rather than Math.Clamp: Clamp arrived in .NET Core 2.0 and does not exist on
+        // .NET Framework, which this same file has to compile for. See samples/OrderPortal.WebForms.
+        var pageSize = Math.Min(100, Math.Max(1, search.PageSize <= 0 ? 25 : search.PageSize));
         var items = matching.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
         return new PagedOrders
@@ -56,7 +58,7 @@ public sealed class OrderService
     public IList<Order> GetCustomerOrders(int customerId, int maxResults) =>
         _data.Orders.Where(o => o.CustomerId == customerId)
             .OrderByDescending(o => o.PlacedUtc)
-            .Take(Math.Clamp(maxResults <= 0 ? 20 : maxResults, 1, 200))
+            .Take(Math.Min(200, Math.Max(1, maxResults <= 0 ? 20 : maxResults)))
             .ToList();
 
     public void CancelOrder(int orderId, string reason)
