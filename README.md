@@ -233,7 +233,7 @@ private endpoint and a `routingDomain` over VPC Lattice. Nothing in this project
 
 Infrastructure is in [`cdk/`](cdk/README.md): one gateway, one target per application, with the OpenAPI
 document validated at `cdk synth` so a breaching tool name fails the deploy rather than the call.
-Typechecked and synthesised against `aws-cdk-lib` 2.264.0.
+Typechecked and synthesised against `aws-cdk-lib` 2.265.0.
 
 ## Security posture
 

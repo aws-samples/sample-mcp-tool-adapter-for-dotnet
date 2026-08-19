@@ -1,6 +1,6 @@
 # CDK: AgentCore Gateway for McpToolAdapter endpoints
 
-One gateway, one target per application. Typechecked and synthesised against `aws-cdk-lib` 2.264.0.
+One gateway, one target per application. Typechecked and synthesised against `aws-cdk-lib` 2.265.0.
 
 ## What it creates
 
