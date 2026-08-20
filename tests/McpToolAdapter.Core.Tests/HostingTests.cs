@@ -32,7 +32,8 @@ namespace McpToolAdapter.Tests
 
         private static McpRequestProcessor Processor(
             McpEndpointOptions options = null,
-            Action<ToolAuditEntry> audit = null)
+            Action<ToolAuditEntry> audit = null,
+            IMcpAuthorizer authorizer = null)
         {
             var catalog = ToolCatalog.Build(
                 new ToolCatalogOptions { RequireDescriptions = false },
@@ -50,7 +51,7 @@ namespace McpToolAdapter.Tests
                 Audit = audit
             });
 
-            return new McpRequestProcessor(dispatcher, effective, new FakeJsonParser());
+            return new McpRequestProcessor(dispatcher, effective, new FakeJsonParser(), authorizer);
         }
 
         private static McpRequest Request(
@@ -84,6 +85,32 @@ namespace McpToolAdapter.Tests
             var response = Processor(Options(o => o.Enabled = false)).TryHandle(Request("GET", "/_mcp/health"));
 
             Assert.Equal(404, response.StatusCode);
+        }
+
+        [Fact]
+        public void NeedsNoSharedSecretWhenTheAuthorizerDoesNotUseOne()
+        {
+            // The case that motivated moving the requirement onto the authorizer: an application using
+            // OAuth bearer tokens has no shared secret, and previously had to invent one to be served
+            // at all.
+            var response = Processor(
+                    Options(o => o.SharedSecret = null),
+                    authorizer: new AlwaysAllowAuthorizer())
+                .TryHandle(Request("GET", "/_mcp/health", key: null));
+
+            Assert.Equal(200, response.StatusCode);
+        }
+
+        [Fact]
+        public void RefusesEveryRequestWhenTheAuthorizerReportsAConfigurationProblem()
+        {
+            var response = Processor(
+                    Options(),
+                    authorizer: new BrokenAuthorizer())
+                .TryHandle(Request("GET", "/_mcp/health"));
+
+            Assert.Equal(503, response.StatusCode);
+            Assert.Contains("misconfigured", response.Body);
         }
 
         [Fact]
@@ -366,5 +393,29 @@ namespace McpToolAdapter.Tests
                 return result;
             }
         }
+
+        /// <summary>Carries no credential requirement, like a bearer-token authorizer with a valid setup.</summary>
+        private sealed class AlwaysAllowAuthorizer : IMcpAuthorizer
+        {
+            public IReadOnlyList<string> ConfigurationProblems { get; } = new string[0];
+
+            public McpAuthorizationResult Authorize(McpRequest request, McpEndpointOptions options)
+            {
+                return McpAuthorizationResult.Allow("bearer-token");
+            }
+        }
+
+        /// <summary>Reports a problem, so the endpoint must refuse everything rather than serve.</summary>
+        private sealed class BrokenAuthorizer : IMcpAuthorizer
+        {
+            public IReadOnlyList<string> ConfigurationProblems { get; } =
+                new[] { "No discovery URL was configured." };
+
+            public McpAuthorizationResult Authorize(McpRequest request, McpEndpointOptions options)
+            {
+                throw new InvalidOperationException("Must never be reached while misconfigured.");
+            }
+        }
+
     }
 }

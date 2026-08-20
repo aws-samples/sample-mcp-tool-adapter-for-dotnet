@@ -42,8 +42,13 @@ public static class Program
         string.Equals(Environment.GetEnvironmentVariable("MCP_ALLOW_MUTATING"), "true",
             StringComparison.OrdinalIgnoreCase);
 
+    // Running in Lambda is the reliable signal. This used to test for MCP_SHARED_SECRET, which broke as
+    // soon as bearer-token mode arrived: an application authenticating with OAuth has no shared secret,
+    // so a deployed process looked local, kept developer-friendly error detail on, and tried to bind a
+    // port.
     private static readonly bool IsDeployed =
-        Environment.GetEnvironmentVariable("MCP_SHARED_SECRET") is { Length: > 0 };
+        Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME") is { Length: > 0 }
+        || Environment.GetEnvironmentVariable("MCP_SHARED_SECRET") is { Length: > 0 };
 
     // Explicit public URL, when the host header cannot be trusted to be it.
     //
@@ -217,7 +222,10 @@ public static class Program
         var destination = args[index + 1];
         var serverUrl = PublicServerUrl ?? "https://server-url-supplied-at-deploy-time.invalid";
 
-        var response = ProcessorFor(serverUrl).TryHandle(new McpRequest(
+        // Forces shared-secret authorization for this one synthetic request. In bearer-token mode the
+        // configured authorizer would want a real signed JWT, which a build step has no way to obtain,
+        // and the document does not depend on how callers authenticate.
+        var response = ProcessorFor(serverUrl, new SharedSecretAuthorizer()).TryHandle(new McpRequest(
             "GET",
             "/_mcp/openapi.json",
             new Dictionary<string, string> { [McpEndpointOptions.ApiKeyHeader] = SharedSecret },
@@ -270,15 +278,19 @@ public static class Program
         string.IsNullOrEmpty(value) ? "" :
         value.Length <= max ? value : value.Substring(0, max) + $"… (+{value.Length - max} more)";
 
-    private static McpRequestProcessor ProcessorFor(string baseUrl)
+    private static McpRequestProcessor ProcessorFor(string baseUrl, IMcpAuthorizer? authorizer = null)
     {
-        return Processors.GetOrAdd(baseUrl, url => new McpRequestProcessor(
+        // The authorizer is part of the cache key, so the dump path's shared-secret processor never
+        // becomes the one that serves real traffic.
+        var key = baseUrl + (authorizer == null ? "" : "|" + authorizer.GetType().Name);
+
+        return Processors.GetOrAdd(key, _ => new McpRequestProcessor(
             _dispatcher,
             new McpEndpointOptions
             {
                 Enabled = true,
                 SharedSecret = SharedSecret,
-                ServerUrl = url,
+                ServerUrl = baseUrl,
                 Title = "Order portal operations",
                 AgentCoreTargetName = TargetName,
                 AllowMutating = AllowMutating,
@@ -288,7 +300,7 @@ public static class Program
                 IncludeExceptionDetail = !IsDeployed
             },
             new SystemTextJsonParser(),
-            BuildAuthorizer()));
+            authorizer ?? BuildAuthorizer()));
     }
 
     /// <summary>

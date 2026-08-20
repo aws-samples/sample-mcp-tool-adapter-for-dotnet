@@ -60,6 +60,20 @@ namespace McpToolAdapter.Hosting
     public interface IMcpAuthorizer
     {
         McpAuthorizationResult Authorize(McpRequest request, McpEndpointOptions options);
+
+        /// <summary>
+        /// Reasons this authorizer cannot safely authorize anything, or empty when it is ready.
+        /// </summary>
+        /// <remarks>
+        /// Each authorizer declares its own configuration requirements, because only it knows them. A
+        /// shared secret is mandatory for <see cref="SharedSecretAuthorizer"/> and meaningless to a
+        /// bearer-token authorizer, so the endpoint cannot sensibly decide this centrally: doing so
+        /// forced applications using OAuth to configure a shared secret they never use.
+        /// <para>A non-empty result makes the endpoint refuse every request. Reporting rather than
+        /// throwing is deliberate, so a misconfigured MCP endpoint never stops an application serving
+        /// its own pages.</para>
+        /// </remarks>
+        IReadOnlyList<string> ConfigurationProblems { get; }
     }
 
     /// <summary>
@@ -76,6 +90,42 @@ namespace McpToolAdapter.Hosting
     /// </remarks>
     public sealed class SharedSecretAuthorizer : IMcpAuthorizer
     {
+        private readonly IReadOnlyList<string> _problems;
+
+        public SharedSecretAuthorizer(McpEndpointOptions options = null)
+        {
+            _problems = Check(options);
+        }
+
+        /// <inheritdoc />
+        public IReadOnlyList<string> ConfigurationProblems
+        {
+            get { return _problems; }
+        }
+
+        /// <summary>
+        /// The shared secret requirement, which lives here rather than on the options because it is a
+        /// requirement of this authorizer alone.
+        /// </summary>
+        private static IReadOnlyList<string> Check(McpEndpointOptions options)
+        {
+            var problems = new List<string>();
+            if (options == null || !options.Enabled) return problems;
+
+            if (string.IsNullOrWhiteSpace(options.SharedSecret))
+            {
+                problems.Add("A shared secret is required when the endpoint is enabled with shared-secret " +
+                             "authorization; without one the endpoint is unauthenticated remote invocation " +
+                             "of business logic.");
+            }
+            else if (options.SharedSecret.Length < 32)
+            {
+                problems.Add("The shared secret must be at least 32 characters.");
+            }
+
+            return problems;
+        }
+
         public McpAuthorizationResult Authorize(McpRequest request, McpEndpointOptions options)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));

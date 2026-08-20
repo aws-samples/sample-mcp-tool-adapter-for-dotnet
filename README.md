@@ -66,7 +66,7 @@ adapter into legacy code is not, so that is all this builds.
 | `samples/QuickStart` | Minimal ASP.NET Core demonstration, the fastest way to see it work |
 | `samples/OrderPortal` | 15-operation application with `DataTable`/`DataSet` results, deployed privately |
 | `samples/OrderPortal.WebForms` | The same 15 operations on `net472` WebForms, with the business logic linked by source from `samples/OrderPortal` so it is demonstrably unchanged |
-| `docs/` | Architecture diagrams, AgentCore test procedure, one-pager, executive overview |
+| `docs/` | Architecture diagrams, AgentCore test procedure, identity and memory, one-pager, executive overview |
 
 ## Testing the AgentCore round trip
 
@@ -84,6 +84,21 @@ AgentCore reach it over VPC Lattice. No IIS, no certificate and no container run
 
 [`docs/agentcore-test.md`](docs/agentcore-test.md) has the full procedure, the six defects the live test
 exposed, and how to tell apart two failures that look identical from the client.
+
+## Caller identity and agent memory
+
+Two things the adapter deliberately does not do, both provided by AgentCore and both deployed by the CDK
+here: carrying a caller identity into your existing authorization checks, and remembering anything between
+calls.
+
+Bearer-token mode has been run end to end. `npx cdk deploy -c authMode=jwt` swaps the shared secret for an
+OAuth2 credential provider, and the application validates a real token instead: the audit trail then
+records the caller from the token's claims rather than "shared-secret". Memory is
+`AWS::BedrockAgentCore::Memory` with actor-scoped namespaces, and it belongs to the agent rather than to
+your application, which is why nothing in the adapter touches it.
+
+[`docs/identity-and-memory.md`](docs/identity-and-memory.md) has what was observed, the rejection cases,
+and the one thing that cannot be persisted at all.
 
 ## Architecture diagrams
 

@@ -73,16 +73,16 @@ namespace McpToolAdapter.Hosting
         /// Reasons this configuration must not serve traffic. A non-empty result means the endpoint
         /// refuses every request rather than serving a weakened one.
         /// </summary>
+        /// <remarks>
+        /// Credential requirements are not checked here. They belong to the authorizer, which is the
+        /// only thing that knows what it needs: a shared secret is mandatory for
+        /// <see cref="SharedSecretAuthorizer"/> and irrelevant to a bearer-token authorizer. See
+        /// <see cref="IMcpAuthorizer.ConfigurationProblems"/>.
+        /// </remarks>
         public IReadOnlyList<string> Validate()
         {
             var problems = new List<string>();
             if (!Enabled) return problems;
-
-            if (string.IsNullOrWhiteSpace(SharedSecret))
-                problems.Add("A shared secret is required when the endpoint is enabled; without one " +
-                             "the endpoint is unauthenticated remote invocation of business logic.");
-            else if (SharedSecret.Length < 32)
-                problems.Add("The shared secret must be at least 32 characters.");
 
             if (string.IsNullOrWhiteSpace(BasePath) || !BasePath.StartsWith("/", StringComparison.Ordinal))
                 problems.Add("The base path must start with '/'.");

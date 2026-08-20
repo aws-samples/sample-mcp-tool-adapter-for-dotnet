@@ -158,6 +158,9 @@ namespace McpToolAdapter.Tests
 
         private sealed class StubAuthorizer : IMcpAuthorizer
         {
+            // Nothing to configure, so nothing can be misconfigured.
+            public IReadOnlyList<string> ConfigurationProblems { get; } = new string[0];
+
             public McpAuthorizationResult Authorize(McpRequest request, McpEndpointOptions options)
             {
                 return McpAuthorizationResult.Allow("dave@example.com", new Dictionary<string, string>

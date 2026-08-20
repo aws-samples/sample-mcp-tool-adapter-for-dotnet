@@ -38,8 +38,14 @@ namespace McpToolAdapter.Hosting
             _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _parser = parser ?? throw new ArgumentNullException(nameof(parser));
-            _authorizer = authorizer ?? new SharedSecretAuthorizer();
-            _configurationProblems = options.Validate();
+            _authorizer = authorizer ?? new SharedSecretAuthorizer(options);
+
+            // Both sources, because they answer different questions: the options know whether the
+            // endpoint itself is coherent, and the authorizer knows whether it has what it needs to
+            // authorize anything.
+            var problems = new List<string>(options.Validate());
+            problems.AddRange(_authorizer.ConfigurationProblems ?? new string[0]);
+            _configurationProblems = problems;
 
             var documentOptions = openApiOptions ?? new OpenApiOptions
             {

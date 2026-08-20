@@ -101,6 +101,39 @@ export interface ExposedApplicationProps {
   };
 
   /**
+   * Use an OAuth2 credential provider for the outbound call instead of an API key.
+   *
+   * This is the path that can carry a caller identity. The gateway obtains a token from the
+   * authorization server and presents it as a bearer token, and the application validates it and maps
+   * its claims onto a principal its existing authorization checks already read.
+   *
+   * With client credentials the token names a client rather than a person, which still proves the whole
+   * bearer path works. Carrying a named end user needs a user-federation flow, where AgentCore
+   * Identity's token vault persists the user's refresh token so only the first call needs consent.
+   */
+  readonly oauth?: {
+    /** Client registered with the authorization server, used by the gateway. */
+    readonly clientId: string;
+    readonly clientSecret: cdk.SecretValue;
+
+    /**
+     * All three endpoints, given explicitly rather than discovered.
+     *
+     * `CreateOauth2CredentialProvider` rejects a provider without a token endpoint, and the CDK's
+     * Cognito factory only accepts an issuer, which fails with "Missing TokenEndpoint". Supplying the
+     * metadata directly avoids depending on AgentCore being able to fetch a discovery document, which is
+     * not something to assume in a locked-down account. Cognito's discovery document is where these
+     * values come from: the issuer is the `cognito-idp` URL, and both endpoints are on the pool domain.
+     */
+    readonly issuer: string;
+    readonly authorizationEndpoint: string;
+    readonly tokenEndpoint: string;
+
+    /** Scopes the gateway requests. These end up in the token the application checks. */
+    readonly scopes: string[];
+  };
+
+  /**
    * Prefix the gateway puts in front of the key, as in `X-Mcp-Key: <prefix><secret>`.
    *
    * Leave unset — the adapter expects the bare secret, and this stack removes the prefix the CDK L2
@@ -318,7 +351,23 @@ export class GatewayStack extends cdk.Stack {
       credentialPrefix: application.credentialPrefix,
     });
 
-    const credentialProvider = application.existingApiKey
+    // OAuth wins when configured, because it is the stronger of the two and configuring both would be a
+    // mistake worth failing on rather than silently resolving.
+    const credentialProvider = application.oauth
+      ? agentcore.GatewayCredentialProvider.fromOauthIdentity(
+          agentcore.OAuth2CredentialProvider.usingCustom(this, `${scopeId}OAuth`, {
+            oAuth2CredentialProviderName: `${application.targetName}-mcp-oauth`,
+            clientId: application.oauth.clientId,
+            clientSecret: application.oauth.clientSecret,
+            authorizationServerMetadata: {
+              issuer: application.oauth.issuer,
+              authorizationEndpoint: application.oauth.authorizationEndpoint,
+              tokenEndpoint: application.oauth.tokenEndpoint,
+            },
+          }),
+          { scopes: application.oauth.scopes },
+        )
+      : application.existingApiKey
       ? // Literal ARNs, so the gateway role is granted access to exactly one secret.
         agentcore.GatewayCredentialProvider.fromApiKeyIdentityArn({
           providerArn: application.existingApiKey.providerArn,
@@ -346,7 +395,7 @@ export class GatewayStack extends cdk.Stack {
 
     const cfnTarget = target.node.defaultChild as agentcore.CfnGatewayTarget;
 
-    if (!application.credentialPrefix) {
+    if (!application.oauth && !application.credentialPrefix) {
       // Remove the prefix the L2 injects. `ApiKeyCredentialLocation.header()` defaults
       // `credentialPrefix` to `"Bearer "` when none is given, so the gateway sends
       // `X-Mcp-Key: Bearer <secret>` rather than the secret. The endpoint compares the whole header
@@ -413,9 +462,16 @@ export class GatewayStack extends cdk.Stack {
 
     const problems: string[] = [];
 
-    if (!application.existingApiKey && !application.sharedSecretArn) {
+    if (application.oauth && (application.existingApiKey || application.sharedSecretArn)) {
       problems.push(
-        'Supply either sharedSecretArn (creates a credential provider) or existingApiKey ' +
+        'Configure either oauth or an API key, not both. Two outbound credentials on one target is ' +
+          'ambiguous, and silently preferring one would hide a mistake.',
+      );
+    }
+
+    if (!application.oauth && !application.existingApiKey && !application.sharedSecretArn) {
+      problems.push(
+        'Supply oauth, or sharedSecretArn (creates a credential provider), or existingApiKey ' +
           '(references one, and scopes the secret grant to a single ARN).',
       );
     }

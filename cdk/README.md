@@ -11,13 +11,32 @@ One gateway, one target per application. Typechecked and synthesised against `aw
 | `AWS::BedrockAgentCore::ApiKeyCredentialProvider` | Holds the shared secret, injected as `X-Mcp-Key` on every outbound call |
 | Cognito user pool, client, domain, resource server | Default inbound identity provider, created automatically unless you pass `inboundJwt` |
 
-## Three stacks
+## Stacks
 
 | Stack | Purpose |
 |---|---|
 | `McpToolAdapterTestApp` | The quick start sample as a zip Lambda behind an HTTPS Function URL. `cdk synth` runs `dotnet publish`, so no container runtime is needed |
 | `McpToolAdapterPrivateApp` | The realistic one: the order portal sample behind a private REST API with no public endpoint. See [`docs/agentcore-test.md`](../docs/agentcore-test.md) |
 | `McpToolAdapterGateway` | The gateway, inbound identity, credential providers, and the targets |
+| `McpToolAdapterIdentity` | Cognito authorization server. Only created with `-c authMode=jwt` |
+| `McpToolAdapterMemory` | AgentCore Memory for the agent. Deployed on its own, because memory belongs to the agent rather than to the application |
+
+## Outbound authentication
+
+```bash
+npx cdk deploy McpToolAdapterPrivateApp McpToolAdapterGateway                      # api key, the default
+npx cdk deploy McpToolAdapterIdentity McpToolAdapterPrivateApp McpToolAdapterGateway -c authMode=jwt
+```
+
+`apikey` proves the gateway is the gateway. `jwt` carries a caller identity into the application, which is
+what makes existing authorization checks work. Both have been run end to end; see
+[`docs/identity-and-memory.md`](../docs/identity-and-memory.md).
+
+Switching between them changes which credential the gateway imports from the application stack. That used
+to break: dropping to `jwt` removed an export the deployed gateway still used, and CloudFormation refuses
+to delete an export in use, so the update rolled back with no ordering that could fix it. The application
+stack now calls `exportValue` on the secret ARN to keep the export alive regardless, which makes the switch
+work in both directions.
 
 ## Deploy
 
@@ -48,9 +67,17 @@ environment-agnostic stack, and those resolve VPC availability-zone lookups to d
 synthesises cleanly and deploys something you did not ask for. A value that is not 12 digits is rejected
 too.
 
-Region is read from `CDK_DEFAULT_REGION` only, never `AWS_REGION`. `AWS_REGION` is often set to something
-unrelated in a shell and it silently beats `--region` on most tooling, and a gateway in the wrong region
-fails in ways that look like a permissions problem. Pass it per command.
+Region needs `AWS_REGION` set, not just `CDK_DEFAULT_REGION`. The app code reads `CDK_DEFAULT_REGION`,
+but the CDK CLI populates that variable for the app subprocess from the region it resolves for your
+credentials, which comes from `AWS_REGION`. So passing `CDK_DEFAULT_REGION=us-east-1` while your shell has
+`AWS_REGION=us-west-2` gets you us-west-2, silently. Measured, not assumed: the same synth produced a
+`cognito-idp.us-west-2.amazonaws.com` issuer until `AWS_REGION` was set as well.
+
+A gateway in the wrong region fails in ways that look like a permissions problem, so set all three:
+
+```bash
+env AWS_REGION=us-east-1 AWS_DEFAULT_REGION=us-east-1 CDK_DEFAULT_REGION=us-east-1 npx cdk deploy …
+```
 
 `cdk.context.json` caches availability-zone lookups keyed by account id, so it is git-ignored here rather
 than committed as CDK normally suggests. Otherwise the account number ends up in version control.

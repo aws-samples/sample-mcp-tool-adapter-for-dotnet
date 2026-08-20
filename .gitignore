@@ -1,6 +1,12 @@
-# Build output
+# Build output.
+#
+# `bin/` matches a directory of that name at any depth, which is what .NET produces, but it also swallowed
+# cdk/bin — the CDK app's source directory, holding app.ts. That is not build output, and the result was a
+# published repository whose CDK could not synth at all, because cdk.json points at bin/app.ts. Hence the
+# negation below. Check `git status` after adding a directory called bin.
 bin/
 obj/
+!cdk/bin/
 artifacts/
 [Dd]ebug/
 [Rr]elease/

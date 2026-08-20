@@ -19,6 +19,33 @@ export interface PrivateAppStackProps extends cdk.StackProps {
 
   /** Whether tools marked Mutating() may run. False by default. */
   readonly allowMutating?: boolean;
+
+  /**
+   * Validate OAuth bearer tokens instead of a shared secret.
+   *
+   * With this set the application stops accepting `X-Mcp-Key` and requires a signed JWT, which is what
+   * carries a caller identity into the business logic. The gateway must be configured with a matching
+   * OAuth outbound credential provider, or every call fails with 401.
+   *
+   * The shared secret is still created and still passed, because the OpenAPI dump during synth uses it
+   * and because it makes switching back a one-line change. The application ignores it in this mode.
+   */
+  readonly jwt?: {
+    /** Must end in `/.well-known/openid-configuration`. */
+    readonly discoveryUrl: string;
+
+    /**
+     * Client ids permitted to call. A client-credentials token carries no audience, so the client id is
+     * what identifies the caller and this is the real allowlist.
+     */
+    readonly allowedClientIds: string[];
+
+    /** Scopes the token must carry, all of them. */
+    readonly requiredScopes?: string[];
+
+    /** Cognito emits `token_use: access`; set it to reject an id token presented as a bearer. */
+    readonly requiredTokenUse?: string;
+  };
 }
 
 /**
@@ -221,6 +248,15 @@ export class PrivateAppStack extends cdk.Stack {
         MCP_SERVER_URL: serverUrl,
         // REST API sends payload format 1.0, unlike a Function URL.
         MCP_LAMBDA_EVENT_SOURCE: 'restapi',
+        ...(props.jwt
+          ? {
+              MCP_AUTH_MODE: 'jwt',
+              MCP_JWT_DISCOVERY_URL: props.jwt.discoveryUrl,
+              MCP_JWT_CLIENT_IDS: props.jwt.allowedClientIds.join(','),
+              MCP_JWT_SCOPES: (props.jwt.requiredScopes ?? []).join(','),
+              MCP_JWT_TOKEN_USE: props.jwt.requiredTokenUse ?? 'access',
+            }
+          : {}),
         // Logs the method, path, headers (credential redacted) and body of every inbound request, so
         // what the gateway sends is visible. A demonstration choice: this writes request bodies to
         // CloudWatch, which a real application should not do.
@@ -246,6 +282,16 @@ export class PrivateAppStack extends cdk.Stack {
     this.sharedSecretArn = secret.secretArn;
     this.targetName = targetName;
 
+    // Pinned so the export outlives the gateway's use of it.
+    //
+    // Switching authMode changes which credential the gateway imports. Without this, moving to jwt makes
+    // this stack stop exporting the secret ARN while the deployed gateway still imports it, and
+    // CloudFormation refuses: "Cannot delete export ... as it is in use by McpToolAdapterGateway". The
+    // update then rolls back, and because the producer must deploy before the consumer there is no
+    // ordering that fixes it. Keeping the export alive regardless makes the switch work in both
+    // directions.
+    this.exportValue(secret.secretArn);
+
     new cdk.CfnOutput(this, 'ServerUrl', {
       value: serverUrl,
       description: 'Private API base URL — resolvable only inside the VPC',
@@ -269,5 +315,9 @@ export class PrivateAppStack extends cdk.Stack {
     });
     new cdk.CfnOutput(this, 'SharedSecretArn', { value: secret.secretArn });
     new cdk.CfnOutput(this, 'TargetName', { value: targetName });
+    new cdk.CfnOutput(this, 'AuthMode', {
+      value: props.jwt ? 'jwt' : 'apikey',
+      description: 'How the application authenticates callers',
+    });
   }
 }
